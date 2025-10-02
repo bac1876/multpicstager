@@ -19,7 +19,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onFilesSelected })
     }
   };
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     fileInputRef.current?.click();
   };
   
@@ -53,7 +54,6 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onFilesSelected })
   return (
     <div
       className={`mt-10 flex justify-center rounded-lg border-2 border-dashed ${isDragging ? 'border-indigo-600 bg-indigo-50' : 'border-gray-300 dark:border-gray-600'} px-6 py-10 transition-colors duration-200`}
-      onClick={handleClick}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -64,6 +64,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onFilesSelected })
         <div className="mt-4 flex text-sm leading-6 text-gray-600 dark:text-gray-400">
           <label
             htmlFor="file-upload"
+            onClick={handleClick}
             className="relative cursor-pointer rounded-md font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500"
           >
             <span>Upload up to {MAX_FILES} files</span>
