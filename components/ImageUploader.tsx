@@ -14,6 +14,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onFilesSelected })
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       onFilesSelected(event.target.files);
+      // Reset the input value so the same files can be selected again
+      event.target.value = '';
     }
   };
 

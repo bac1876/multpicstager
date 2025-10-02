@@ -10,7 +10,8 @@
       "Bash(npm install)",
       "Bash(npm run build:*)",
       "Bash(vercel:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []

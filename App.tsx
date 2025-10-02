@@ -1,5 +1,6 @@
 
 import React, { useState, useCallback } from 'react';
+import JSZip from 'jszip';
 import { ImageUploader } from './components/ImageUploader';
 import { ImageCard } from './components/ImageCard';
 import { Header } from './components/Header';
@@ -136,17 +137,44 @@ export default function App() {
     await processImage(imageToProcess);
   };
 
-  const handleDownloadAll = () => {
+  const handleDownloadAll = async () => {
     const completedImages = images.filter(img => img.status === 'done' && img.restagedUrl);
-    completedImages.forEach(image => {
-        const link = document.createElement('a');
-        link.href = image.restagedUrl!;
+
+    if (completedImages.length === 0) return;
+
+    // Create a new JSZip instance
+    const zip = new JSZip();
+
+    // Add each image to the zip
+    for (const image of completedImages) {
+      try {
+        // Convert base64 to blob
+        const base64Data = image.restagedUrl!.split(',')[1];
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+
         const sanitizedRoomType = image.roomType.toLowerCase().replace(/[\s/]/g, '-');
-        link.download = `restaged-${sanitizedRoomType}-${image.id.slice(-4)}.jpeg`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    });
+        const filename = `restaged-${sanitizedRoomType}-${image.id.slice(-4)}.jpeg`;
+
+        zip.file(filename, byteArray);
+      } catch (error) {
+        console.error(`Failed to add ${image.id} to zip:`, error);
+      }
+    }
+
+    // Generate the zip file and trigger download
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `restaged-rooms-${new Date().getTime()}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
   };
 
   const allLabeled = images.every(
