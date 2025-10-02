@@ -1,5 +1,5 @@
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { MAX_FILES } from '../constants';
 import { UploadCloudIcon } from './IconComponents';
 
@@ -8,7 +8,6 @@ interface ImageUploaderProps {
 }
 
 export const ImageUploader: React.FC<ImageUploaderProps> = ({ onFilesSelected }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -17,11 +16,6 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onFilesSelected })
       // Reset the input value so the same files can be selected again
       event.target.value = '';
     }
-  };
-
-  const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    fileInputRef.current?.click();
   };
   
   const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -64,18 +58,16 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onFilesSelected })
         <div className="mt-4 flex text-sm leading-6 text-gray-600 dark:text-gray-400">
           <label
             htmlFor="file-upload"
-            onClick={handleClick}
             className="relative cursor-pointer rounded-md font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500"
           >
             <span>Upload up to {MAX_FILES} files</span>
-            <input 
-              id="file-upload" 
-              name="file-upload" 
-              type="file" 
-              className="sr-only" 
-              ref={fileInputRef}
+            <input
+              id="file-upload"
+              name="file-upload"
+              type="file"
+              className="sr-only"
               onChange={handleFileChange}
-              multiple 
+              multiple
               accept="image/png, image/jpeg, image/webp"
             />
           </label>
