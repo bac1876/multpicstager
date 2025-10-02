@@ -70,9 +70,9 @@ export default function App() {
       status: 'idle',
       restagedUrl: null,
       error: null,
-      changePaint: true,
+      changePaint: false,
       paintColor: '',
-      changeFlooring: true,
+      changeFlooring: false,
       flooringType: 'carpet',
       additionalInstructions: '',
     }));
