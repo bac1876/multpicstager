@@ -1,8 +1,6 @@
 
 export const roomTypes = [
-  "Primary bedroom",
   "Bedroom",
-  "Primary bathroom",
   "Bathroom",
   "Living room",
   "Dining room",

@@ -28,18 +28,31 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [selectedStyle, setSelectedStyle] = useState<StyleType>('Modern');
 
+  const detectRoomTypeFromFilename = (filename: string): RoomType => {
+    const lowerName = filename.toLowerCase();
+
+    if (lowerName.includes('bedroom') || lowerName.includes('bed')) return 'Bedroom';
+    if (lowerName.includes('bathroom') || lowerName.includes('bath')) return 'Bathroom';
+    if (lowerName.includes('kitchen')) return 'Kitchen';
+    if (lowerName.includes('living')) return 'Living room';
+    if (lowerName.includes('dining')) return 'Dining room';
+    if (lowerName.includes('outside') || lowerName.includes('outdoor') || lowerName.includes('patio') || lowerName.includes('deck')) return 'Outside space';
+
+    return 'Bedroom'; // Default fallback
+  };
+
   const handleFilesSelected = useCallback((files: FileList) => {
     setError(null);
     if (files.length > MAX_FILES) {
       setError(`You can only upload a maximum of ${MAX_FILES} images.`);
       return;
     }
-    
+
     const newImages: ImageFile[] = Array.from(files).map((file, index) => ({
       id: `${Date.now()}-${index}`,
       file,
       previewUrl: URL.createObjectURL(file),
-      roomType: 'Primary bedroom',
+      roomType: detectRoomTypeFromFilename(file.name),
       customRoomType: '',
       status: 'idle',
       restagedUrl: null,

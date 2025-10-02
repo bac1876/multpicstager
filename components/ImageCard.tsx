@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { ImageFile, RoomType, FlooringType } from '../types';
 import { roomTypes } from '../types';
 import { ArrowRightIcon, ErrorIcon, DownloadIcon, RefreshIcon } from './IconComponents';
+import { ImageModal } from './ImageModal';
 
 interface ImageCardProps {
   image: ImageFile;
@@ -23,6 +24,7 @@ const ToggleSwitch: React.FC<{ checked: boolean; onChange: (e: React.ChangeEvent
 
 export const ImageCard: React.FC<ImageCardProps> = ({ image, onUpdate, onRestage }) => {
   const isProcessing = image.status === 'processing';
+  const [modalImage, setModalImage] = useState<{ url: string; alt: string } | null>(null);
 
   const handleDownload = () => {
     if (!image.restagedUrl) return;
@@ -36,43 +38,123 @@ export const ImageCard: React.FC<ImageCardProps> = ({ image, onUpdate, onRestage
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden flex flex-col transition-transform duration-300 hover:scale-105">
-      <div className="p-4">
-        <label htmlFor={`room-type-${image.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Room Type
-        </label>
-        <select
-          id={`room-type-${image.id}`}
-          name={`room-type-${image.id}`}
-          value={image.roomType}
-          onChange={(e) => onUpdate(image.id, { roomType: e.target.value as RoomType, customRoomType: '' })}
-          className="block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          disabled={isProcessing}
-        >
-          {roomTypes.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
-        </select>
-        {image.roomType === 'Other - describe' && (
-          <div className="mt-2">
-            <label htmlFor={`custom-room-type-${image.id}`} className="sr-only">
-              Describe the room
-            </label>
-            <input
-              id={`custom-room-type-${image.id}`}
-              type="text"
-              value={image.customRoomType || ''}
-              onChange={(e) => onUpdate(image.id, { customRoomType: e.target.value })}
-              placeholder="e.g., Home Office, Nursery"
-              className="block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              aria-label="Describe the room type"
-              disabled={isProcessing}
+    <>
+      {modalImage && (
+        <ImageModal
+          imageUrl={modalImage.url}
+          altText={modalImage.alt}
+          onClose={() => setModalImage(null)}
+        />
+      )}
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden flex flex-col transition-transform duration-300 hover:scale-105">
+        {/* Images Section - Moved to Top */}
+        <div className="grid grid-cols-2 gap-1 items-center p-4 relative">
+          {/* Original Image */}
+          <div className="relative aspect-square">
+            <img
+              src={image.previewUrl}
+              alt="Original room"
+              className="object-cover w-full h-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={() => setModalImage({ url: image.previewUrl, alt: 'Original room' })}
             />
+            <div className="absolute bottom-1 right-1 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">Original</div>
           </div>
-        )}
-      </div>
+
+          {/* Arrow Separator */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-gray-800 p-2 rounded-full border border-gray-200 dark:border-gray-600">
+              <ArrowRightIcon className="h-6 w-6 text-indigo-500" />
+          </div>
+
+          {/* Restaged Image */}
+          <div className="relative aspect-square">
+            {image.status === 'processing' && <SkeletonLoader />}
+            {image.status === 'done' && image.restagedUrl && (
+              <>
+                <img
+                  src={image.restagedUrl}
+                  alt="Restaged room"
+                  className="object-cover w-full h-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => setModalImage({ url: image.restagedUrl!, alt: 'Restaged room' })}
+                />
+                <div className="absolute bottom-1 right-1 bg-indigo-600 bg-opacity-70 text-white text-xs px-2 py-1 rounded">Restaged</div>
+                <div className="absolute top-2 right-2 flex flex-col gap-2">
+                  <button
+                      onClick={handleDownload}
+                      className="bg-white dark:bg-gray-800 p-2 rounded-full shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+                      aria-label="Download restaged image"
+                      title="Download restaged image"
+                  >
+                      <DownloadIcon className="h-5 w-5 text-gray-700 dark:text-gray-200" />
+                  </button>
+                  <button
+                      onClick={() => onRestage(image.id)}
+                      className="bg-white dark:bg-gray-800 p-2 rounded-full shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+                      aria-label="Restage this image again"
+                      title="Restage this image again"
+                  >
+                      <RefreshIcon className="h-5 w-5 text-gray-700 dark:text-gray-200" />
+                  </button>
+                </div>
+              </>
+            )}
+            {image.status === 'error' && (
+               <div className="w-full h-full flex flex-col items-center justify-center bg-red-50 dark:bg-red-900/20 rounded-lg text-center p-2">
+                  <ErrorIcon className="h-8 w-8 text-red-500 mb-2" />
+                  <p className="text-sm font-semibold text-red-600 dark:text-red-400">Processing Failed</p>
+                  <p className="text-xs text-red-500 dark:text-red-400/80 mt-1">{image.error || 'An error occurred.'}</p>
+                   <button
+                      onClick={() => onRestage(image.id)}
+                      className="mt-3 px-3 py-1 text-sm font-semibold text-white bg-indigo-600 rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                   >
+                      Try Again
+                  </button>
+               </div>
+            )}
+            {(image.status === 'idle') && (
+              <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700/50 rounded-lg">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Waiting...</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Room Type Section - Moved Below Images */}
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+          <label htmlFor={`room-type-${image.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Room Type
+          </label>
+          <select
+            id={`room-type-${image.id}`}
+            name={`room-type-${image.id}`}
+            value={image.roomType}
+            onChange={(e) => onUpdate(image.id, { roomType: e.target.value as RoomType, customRoomType: '' })}
+            className="block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            disabled={isProcessing}
+          >
+            {roomTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+          {image.roomType === 'Other - describe' && (
+            <div className="mt-2">
+              <label htmlFor={`custom-room-type-${image.id}`} className="sr-only">
+                Describe the room
+              </label>
+              <input
+                id={`custom-room-type-${image.id}`}
+                type="text"
+                value={image.customRoomType || ''}
+                onChange={(e) => onUpdate(image.id, { customRoomType: e.target.value })}
+                placeholder="e.g., Home Office, Nursery"
+                className="block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                aria-label="Describe the room type"
+                disabled={isProcessing}
+              />
+            </div>
+          )}
+        </div>
 
       <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Restyling Options</h4>
@@ -136,66 +218,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({ image, onUpdate, onRestage
             disabled={isProcessing}
         />
       </div>
-
-      <div className="grid grid-cols-2 gap-1 items-center px-4 pb-4 flex-grow relative">
-        {/* Original Image */}
-        <div className="relative aspect-square">
-          <img src={image.previewUrl} alt="Original room" className="object-cover w-full h-full rounded-lg" />
-          <div className="absolute bottom-1 right-1 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">Original</div>
-        </div>
-
-        {/* Arrow Separator */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-gray-800 p-2 rounded-full border border-gray-200 dark:border-gray-600">
-            <ArrowRightIcon className="h-6 w-6 text-indigo-500" />
-        </div>
-
-        {/* Restaged Image */}
-        <div className="relative aspect-square">
-          {image.status === 'processing' && <SkeletonLoader />}
-          {image.status === 'done' && image.restagedUrl && (
-            <>
-              <img src={image.restagedUrl} alt="Restaged room" className="object-cover w-full h-full rounded-lg" />
-              <div className="absolute bottom-1 right-1 bg-indigo-600 bg-opacity-70 text-white text-xs px-2 py-1 rounded">Restaged</div>
-              <div className="absolute top-2 right-2 flex flex-col gap-2">
-                <button
-                    onClick={handleDownload}
-                    className="bg-white dark:bg-gray-800 p-2 rounded-full shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
-                    aria-label="Download restaged image"
-                    title="Download restaged image"
-                >
-                    <DownloadIcon className="h-5 w-5 text-gray-700 dark:text-gray-200" />
-                </button>
-                <button
-                    onClick={() => onRestage(image.id)}
-                    className="bg-white dark:bg-gray-800 p-2 rounded-full shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
-                    aria-label="Restage this image again"
-                    title="Restage this image again"
-                >
-                    <RefreshIcon className="h-5 w-5 text-gray-700 dark:text-gray-200" />
-                </button>
-              </div>
-            </>
-          )}
-          {image.status === 'error' && (
-             <div className="w-full h-full flex flex-col items-center justify-center bg-red-50 dark:bg-red-900/20 rounded-lg text-center p-2">
-                <ErrorIcon className="h-8 w-8 text-red-500 mb-2" />
-                <p className="text-sm font-semibold text-red-600 dark:text-red-400">Processing Failed</p>
-                <p className="text-xs text-red-500 dark:text-red-400/80 mt-1">{image.error || 'An error occurred.'}</p>
-                 <button 
-                    onClick={() => onRestage(image.id)}
-                    className="mt-3 px-3 py-1 text-sm font-semibold text-white bg-indigo-600 rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                 >
-                    Try Again
-                </button>
-             </div>
-          )}
-          {(image.status === 'idle') && (
-            <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700/50 rounded-lg">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Waiting...</p>
-            </div>
-          )}
-        </div>
       </div>
-    </div>
+    </>
   );
 };
