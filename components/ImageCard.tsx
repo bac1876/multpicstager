@@ -12,7 +12,7 @@ interface ImageCardProps {
 }
 
 const SkeletonLoader: React.FC = () => (
-  <div className="w-full h-full bg-gray-300 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+  <div className="h-full w-full animate-pulse rounded-lg bg-gradient-to-br from-purple-900/20 to-pink-900/20"></div>
 );
 
 const ToggleSwitch: React.FC<{ checked: boolean; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; disabled?: boolean; }> = ({ checked, onChange, disabled }) => (
@@ -46,7 +46,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({ image, onUpdate, onRestage
           onClose={() => setModalImage(null)}
         />
       )}
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden flex flex-col transition-transform duration-300 hover:scale-105">
+      <div className="relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/40 shadow-2xl backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-purple-500/50 hover:shadow-purple-500/20">
         {/* Images Section - Moved to Top */}
         <div className="grid grid-cols-2 gap-1 items-center p-4 relative">
           {/* Original Image */}
@@ -61,8 +61,8 @@ export const ImageCard: React.FC<ImageCardProps> = ({ image, onUpdate, onRestage
           </div>
 
           {/* Arrow Separator */}
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-gray-800 p-2 rounded-full border border-gray-200 dark:border-gray-600">
-              <ArrowRightIcon className="h-6 w-6 text-indigo-500" />
+          <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-full border border-purple-500/50 bg-black/80 p-2 shadow-lg backdrop-blur-sm">
+              <ArrowRightIcon className="h-6 w-6 text-purple-400" />
           </div>
 
           {/* Restaged Image */}
@@ -119,8 +119,8 @@ export const ImageCard: React.FC<ImageCardProps> = ({ image, onUpdate, onRestage
         </div>
 
         {/* Room Type Section - Moved Below Images */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-          <label htmlFor={`room-type-${image.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <div className="border-t border-white/10 p-4">
+          <label htmlFor={`room-type-${image.id}`} className="mb-2 block text-sm font-medium text-gray-300">
             Room Type
           </label>
           <select
@@ -128,7 +128,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({ image, onUpdate, onRestage
             name={`room-type-${image.id}`}
             value={image.roomType}
             onChange={(e) => onUpdate(image.id, { roomType: e.target.value as RoomType, customRoomType: '' })}
-            className="block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            className="block w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-white shadow-sm transition-all duration-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 sm:text-sm"
             disabled={isProcessing}
           >
             {roomTypes.map((type) => (
@@ -148,7 +148,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({ image, onUpdate, onRestage
                 value={image.customRoomType || ''}
                 onChange={(e) => onUpdate(image.id, { customRoomType: e.target.value })}
                 placeholder="e.g., Home Office, Nursery"
-                className="block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="block w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-white shadow-sm transition-all duration-200 placeholder:text-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 sm:text-sm"
                 aria-label="Describe the room type"
                 disabled={isProcessing}
               />
@@ -156,12 +156,12 @@ export const ImageCard: React.FC<ImageCardProps> = ({ image, onUpdate, onRestage
           )}
         </div>
 
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
-         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Restyling Options</h4>
+      <div className="space-y-3 border-t border-white/10 p-4">
+         <h4 className="text-sm font-medium text-gray-300">Restyling Options</h4>
          {/* Paint Options */}
          <div className="space-y-2">
             <div className="flex items-center justify-between">
-                <label className="text-sm text-gray-600 dark:text-gray-400">Change Paint</label>
+                <label className="text-sm text-gray-400">Change Paint</label>
                 <ToggleSwitch checked={image.changePaint} onChange={(e) => onUpdate(image.id, { changePaint: e.target.checked })} disabled={isProcessing} />
             </div>
             {image.changePaint && (
@@ -170,7 +170,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({ image, onUpdate, onRestage
                     value={image.paintColor}
                     onChange={(e) => onUpdate(image.id, { paintColor: e.target.value })}
                     placeholder="Optional: e.g., 'warm beige'"
-                    className="block w-full text-sm rounded-md border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    className="block w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-sm text-white shadow-sm transition-all duration-200 placeholder:text-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50"
                     disabled={isProcessing}
                 />
             )}
@@ -178,34 +178,34 @@ export const ImageCard: React.FC<ImageCardProps> = ({ image, onUpdate, onRestage
          {/* Flooring Options */}
          <div className="space-y-2">
             <div className="flex items-center justify-between">
-                <label className="text-sm text-gray-600 dark:text-gray-400">Change Flooring</label>
+                <label className="text-sm text-gray-400">Change Flooring</label>
                 <ToggleSwitch checked={image.changeFlooring} onChange={(e) => onUpdate(image.id, { changeFlooring: e.target.checked })} disabled={isProcessing} />
             </div>
             {image.changeFlooring && (
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                     <label className="flex items-center text-sm">
-                        <input type="radio" name={`flooring-${image.id}`} value="carpet" checked={image.flooringType === 'carpet'} onChange={() => onUpdate(image.id, { flooringType: 'carpet' as FlooringType })} className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500" disabled={isProcessing}/>
-                        <span className="ml-2 text-gray-700 dark:text-gray-300">Carpet</span>
+                        <input type="radio" name={`flooring-${image.id}`} value="carpet" checked={image.flooringType === 'carpet'} onChange={() => onUpdate(image.id, { flooringType: 'carpet' as FlooringType })} className="h-4 w-4 border-white/20 text-purple-600 focus:ring-2 focus:ring-purple-500/50" disabled={isProcessing}/>
+                        <span className="ml-2 text-gray-300">Carpet</span>
                     </label>
                      <label className="flex items-center text-sm">
-                        <input type="radio" name={`flooring-${image.id}`} value="wood" checked={image.flooringType === 'wood'} onChange={() => onUpdate(image.id, { flooringType: 'wood' as FlooringType })} className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500" disabled={isProcessing}/>
-                        <span className="ml-2 text-gray-700 dark:text-gray-300">Wood</span>
+                        <input type="radio" name={`flooring-${image.id}`} value="wood" checked={image.flooringType === 'wood'} onChange={() => onUpdate(image.id, { flooringType: 'wood' as FlooringType })} className="h-4 w-4 border-white/20 text-purple-600 focus:ring-2 focus:ring-purple-500/50" disabled={isProcessing}/>
+                        <span className="ml-2 text-gray-300">Wood</span>
                     </label>
                      <label className="flex items-center text-sm">
-                        <input type="radio" name={`flooring-${image.id}`} value="tile" checked={image.flooringType === 'tile'} onChange={() => onUpdate(image.id, { flooringType: 'tile' as FlooringType })} className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500" disabled={isProcessing}/>
-                        <span className="ml-2 text-gray-700 dark:text-gray-300">Tile</span>
+                        <input type="radio" name={`flooring-${image.id}`} value="tile" checked={image.flooringType === 'tile'} onChange={() => onUpdate(image.id, { flooringType: 'tile' as FlooringType })} className="h-4 w-4 border-white/20 text-purple-600 focus:ring-2 focus:ring-purple-500/50" disabled={isProcessing}/>
+                        <span className="ml-2 text-gray-300">Tile</span>
                     </label>
                      <label className="flex items-center text-sm">
-                        <input type="radio" name={`flooring-${image.id}`} value="laminate" checked={image.flooringType === 'laminate'} onChange={() => onUpdate(image.id, { flooringType: 'laminate' as FlooringType })} className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500" disabled={isProcessing}/>
-                        <span className="ml-2 text-gray-700 dark:text-gray-300">Laminate</span>
+                        <input type="radio" name={`flooring-${image.id}`} value="laminate" checked={image.flooringType === 'laminate'} onChange={() => onUpdate(image.id, { flooringType: 'laminate' as FlooringType })} className="h-4 w-4 border-white/20 text-purple-600 focus:ring-2 focus:ring-purple-500/50" disabled={isProcessing}/>
+                        <span className="ml-2 text-gray-300">Laminate</span>
                     </label>
                 </div>
             )}
          </div>
       </div>
 
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-        <label htmlFor={`instructions-${image.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+      <div className="border-t border-white/10 p-4">
+        <label htmlFor={`instructions-${image.id}`} className="mb-2 block text-sm font-medium text-gray-300">
             Additional Instructions (Optional)
         </label>
         <textarea
@@ -214,7 +214,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({ image, onUpdate, onRestage
             value={image.additionalInstructions}
             onChange={(e) => onUpdate(image.id, { additionalInstructions: e.target.value })}
             placeholder="e.g., add a large plant in the corner, use gold accents, make the style more kid-friendly"
-            className="block w-full text-sm rounded-md border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className="block w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-sm text-white shadow-sm transition-all duration-200 placeholder:text-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50"
             disabled={isProcessing}
         />
       </div>

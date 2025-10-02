@@ -1,9 +1,12 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
+import { motion } from 'framer-motion';
 import JSZip from 'jszip';
 import { ImageUploader } from './components/ImageUploader';
 import { ImageCard } from './components/ImageCard';
 import { Header } from './components/Header';
+import { HeroSection } from './components/HeroSection';
+import { FeaturesSection } from './components/FeaturesSection';
 import { SparklesIcon, TrashIcon, DownloadIcon } from './components/IconComponents';
 import type { ImageFile, ProcessingStatus, StyleType } from './types';
 import { styleTypes } from './types';
@@ -28,6 +31,15 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedStyle, setSelectedStyle] = useState<StyleType>('Modern');
+  const [showUploader, setShowUploader] = useState<boolean>(false);
+  const uploaderRef = useRef<HTMLDivElement>(null);
+
+  const handleGetStarted = () => {
+    setShowUploader(true);
+    setTimeout(() => {
+      uploaderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
 
   const detectRoomTypeFromFilename = (filename: string): RoomType => {
     const lowerName = filename.toLowerCase();
@@ -187,32 +199,52 @@ export default function App() {
   const hasCompletedImages = images.some(img => img.status === 'done');
 
   return (
-    <div className="min-h-screen font-sans text-gray-800 dark:text-gray-200">
+    <div className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black font-sans text-white">
       <div className="container mx-auto p-4 md:p-8">
-        <Header />
+        {images.length === 0 && !showUploader && (
+          <>
+            <HeroSection onGetStarted={handleGetStarted} />
+            <FeaturesSection />
+          </>
+        )}
 
-        {error && (
-          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 my-4 rounded-md" role="alert">
-            <p className="font-bold">Error</p>
-            <p>{error}</p>
+        {(showUploader || images.length > 0) && (
+          <div ref={uploaderRef}>
+            <Header />
           </div>
         )}
 
-        {images.length === 0 ? (
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="my-4 rounded-lg border-l-4 border-red-500 bg-red-900/20 p-4 backdrop-blur-sm"
+            role="alert"
+          >
+            <p className="font-bold text-red-400">Error</p>
+            <p className="text-red-300">{error}</p>
+          </motion.div>
+        )}
+
+        {images.length === 0 && showUploader ? (
           <ImageUploader onFilesSelected={handleFilesSelected} />
-        ) : (
-          <div>
-            <div className="my-6 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        ) : images.length > 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="my-6 rounded-2xl border border-white/10 bg-black/40 p-6 shadow-2xl backdrop-blur-sm">
+                <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
                     <div className="w-full md:w-1/3">
-                        <label htmlFor="design-style" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label htmlFor="design-style" className="mb-2 block text-sm font-medium text-gray-300">
                             Overall Design Style
                         </label>
                         <select
                             id="design-style"
                             value={selectedStyle}
                             onChange={(e) => setSelectedStyle(e.target.value as StyleType)}
-                            className="block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            className="block w-full rounded-lg border border-white/10 bg-black/60 px-4 py-3 text-white shadow-sm transition-all duration-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 sm:text-sm"
                             disabled={isProcessing}
                         >
                             {styleTypes.map(style => (
@@ -220,15 +252,15 @@ export default function App() {
                             ))}
                         </select>
                     </div>
-                    <div className="flex flex-col sm:flex-row justify-end items-center gap-4 w-full md:w-auto">
+                    <div className="flex w-full flex-col items-center justify-end gap-4 sm:flex-row md:w-auto">
                         <button
                             onClick={handleRestageAll}
                             disabled={isProcessing || !allLabeled}
-                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 font-semibold text-white bg-indigo-600 rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200"
+                            className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-3 font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-purple-500/50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-black disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 sm:w-auto"
                         >
                             {isProcessing ? (
                             <>
-                                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <svg className="-ml-1 mr-3 h-5 w-5 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
@@ -244,7 +276,7 @@ export default function App() {
                          <button
                             onClick={handleDownloadAll}
                             disabled={isProcessing || !hasCompletedImages}
-                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 font-semibold text-gray-700 bg-gray-200 rounded-lg shadow-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200"
+                            className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/10 px-6 py-3 font-semibold text-white shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-black disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 sm:w-auto"
                             title="Download all successfully restaged images"
                         >
                             <DownloadIcon className="h-5 w-5" />
@@ -253,7 +285,7 @@ export default function App() {
                         <button
                             onClick={handleClearAll}
                             disabled={isProcessing}
-                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 font-semibold text-gray-700 bg-gray-200 rounded-lg shadow-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200"
+                            className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/10 px-6 py-3 font-semibold text-white shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-black disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 sm:w-auto"
                         >
                             <TrashIcon className="h-5 w-5" />
                             Clear All
@@ -262,18 +294,24 @@ export default function App() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {images.map(image => (
-                <ImageCard
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+              {images.map((image, index) => (
+                <motion.div
                   key={image.id}
-                  image={image}
-                  onUpdate={handleImageUpdate}
-                  onRestage={handleRestageSingleImage}
-                />
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                >
+                  <ImageCard
+                    image={image}
+                    onUpdate={handleImageUpdate}
+                    onRestage={handleRestageSingleImage}
+                  />
+                </motion.div>
               ))}
             </div>
-          </div>
-        )}
+          </motion.div>
+        ) : null}
       </div>
     </div>
   );

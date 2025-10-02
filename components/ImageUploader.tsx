@@ -1,7 +1,9 @@
 
 import React, { useCallback, useState } from 'react';
+import { motion } from 'framer-motion';
 import { MAX_FILES } from '../constants';
 import { UploadCloudIcon } from './IconComponents';
+import { BorderBeam } from './ui/border-beam';
 
 interface ImageUploaderProps {
   onFilesSelected: (files: FileList) => void;
@@ -17,7 +19,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onFilesSelected })
       event.target.value = '';
     }
   };
-  
+
   const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -46,35 +48,60 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onFilesSelected })
 
 
   return (
-    <div
-      className={`mt-10 flex justify-center rounded-lg border-2 border-dashed ${isDragging ? 'border-indigo-600 bg-indigo-50' : 'border-gray-300 dark:border-gray-600'} px-6 py-10 transition-colors duration-200`}
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="relative mt-10"
     >
-      <div className="text-center">
-        <UploadCloudIcon className="mx-auto h-12 w-12 text-gray-400" />
-        <div className="mt-4 flex text-sm leading-6 text-gray-600 dark:text-gray-400">
-          <label
-            htmlFor="file-upload"
-            className="relative cursor-pointer rounded-md font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500"
+      <div
+        className={`relative flex justify-center overflow-hidden rounded-2xl border-2 border-dashed px-6 py-16 transition-all duration-300 ${
+          isDragging
+            ? 'border-purple-500 bg-purple-500/10 scale-105'
+            : 'border-white/20 bg-black/40 backdrop-blur-sm hover:border-purple-500/50 hover:bg-black/60'
+        }`}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
+        {isDragging && (
+          <BorderBeam
+            size={300}
+            duration={8}
+            borderWidth={2}
+            colorFrom="#667eea"
+            colorTo="#764ba2"
+          />
+        )}
+        <div className="text-center">
+          <motion.div
+            animate={isDragging ? { scale: 1.2, rotate: 360 } : { scale: 1, rotate: 0 }}
+            transition={{ duration: 0.3 }}
           >
-            <span>Upload up to {MAX_FILES} files</span>
-            <input
-              id="file-upload"
-              name="file-upload"
-              type="file"
-              className="sr-only"
-              onChange={handleFileChange}
-              multiple
-              accept="image/png, image/jpeg, image/webp"
-            />
-          </label>
-          <p className="pl-1">or drag and drop</p>
+            <UploadCloudIcon className="mx-auto h-16 w-16 text-purple-400" />
+          </motion.div>
+          <div className="mt-6 flex flex-col items-center gap-2 text-base leading-6">
+            <label
+              htmlFor="file-upload"
+              className="relative cursor-pointer rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 font-semibold text-white transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-purple-500/50 focus-within:outline-none focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 focus-within:ring-offset-black"
+            >
+              <span>Upload up to {MAX_FILES} files</span>
+              <input
+                id="file-upload"
+                name="file-upload"
+                type="file"
+                className="sr-only"
+                onChange={handleFileChange}
+                multiple
+                accept="image/png, image/jpeg, image/webp"
+              />
+            </label>
+            <p className="text-gray-400">or drag and drop</p>
+          </div>
+          <p className="mt-4 text-sm leading-5 text-gray-500">PNG, JPG, WEBP up to 10MB each</p>
         </div>
-        <p className="text-xs leading-5 text-gray-500 dark:text-gray-500">PNG, JPG, WEBP up to 10MB each</p>
       </div>
-    </div>
+    </motion.div>
   );
 };
