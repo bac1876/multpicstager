@@ -91,19 +91,12 @@ export const restageImage = async (
     // Convert base64 to File object
     const imageFile = base64ToFile(base64ImageData, mimeType, 'room-image.jpg');
 
-    // Map quality to OpenAI quality parameter
-    const qualityMap: Record<ImageQuality, 'low' | 'medium' | 'high'> = {
-      low: 'low',
-      medium: 'medium',
-      high: 'high'
-    };
-
     // Use images.edit API with gpt-image-1
+    // Note: quality parameter is not supported by images.edit, only by images.generate
     const response = await openai.images.edit({
       model: "gpt-image-1",
       image: imageFile,
       prompt: fullPrompt,
-      quality: qualityMap[options.quality],
       n: 1,
       size: "1024x1024"
     });
