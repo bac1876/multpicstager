@@ -105,17 +105,31 @@ export const restageImage = async (
       prompt: fullPrompt,
       quality: qualityMap[options.quality],
       n: 1,
-      response_format: "b64_json",
       size: "1024x1024"
     });
 
-    const imageData = response.data[0]?.b64_json;
+    // The response contains a URL, we need to fetch and convert to base64
+    const imageUrl = response.data[0]?.url;
 
-    if (!imageData) {
+    if (!imageUrl) {
       throw new Error('No restaged image was returned from the API.');
     }
 
-    return imageData;
+    // Fetch the image and convert to base64
+    const imageResponse = await fetch(imageUrl);
+    const imageBlob = await imageResponse.blob();
+
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64data = reader.result as string;
+        // Remove the data URL prefix to get just the base64 string
+        const base64 = base64data.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(imageBlob);
+    });
   } catch (error) {
     console.error("Error in OpenAI API call:", error);
     if (error instanceof Error) {
