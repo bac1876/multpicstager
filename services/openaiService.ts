@@ -23,6 +23,26 @@ interface RestageOptions {
 }
 
 /**
+ * Converts a base64 string to a File object
+ */
+function base64ToFile(base64Data: string, mimeType: string, filename: string): File {
+  // Remove data URL prefix if present
+  const base64Clean = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
+
+  // Convert base64 to binary
+  const byteCharacters = atob(base64Clean);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNumbers);
+
+  // Create blob and convert to File
+  const blob = new Blob([byteArray], { type: mimeType });
+  return new File([blob], filename, { type: mimeType });
+}
+
+/**
  * Sends an image to the OpenAI API to be restaged using gpt-image-1.
  * @param base64ImageData The base64-encoded image data.
  * @param mimeType The MIME type of the image (e.g., 'image/jpeg').
@@ -68,55 +88,34 @@ export const restageImage = async (
 
     const fullPrompt = `${prompt} IMPORTANT: ${rules.join(' ')}`;
 
-    // Construct the image data URL
-    const imageDataUrl = `data:${mimeType};base64,${base64ImageData}`;
+    // Convert base64 to File object
+    const imageFile = base64ToFile(base64ImageData, mimeType, 'room-image.jpg');
 
-    // Map quality to size (quality parameter doesn't work with edit)
-    const sizeMap: Record<ImageQuality, '1024x1024' | '1536x1536'> = {
-      low: '1024x1024',
-      medium: '1024x1024',
-      high: '1536x1536'
+    // Map quality to OpenAI quality parameter
+    const qualityMap: Record<ImageQuality, 'low' | 'medium' | 'high'> = {
+      low: 'low',
+      medium: 'medium',
+      high: 'high'
     };
 
-    // Use Chat Completions API with gpt-image-1
-    const response = await openai.chat.completions.create({
+    // Use images.edit API with gpt-image-1
+    const response = await openai.images.edit({
       model: "gpt-image-1",
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image_url",
-              image_url: {
-                url: imageDataUrl
-              }
-            },
-            {
-              type: "text",
-              text: fullPrompt
-            }
-          ]
-        }
-      ],
-      max_completion_tokens: 2048,
+      image: imageFile,
+      prompt: fullPrompt,
+      quality: qualityMap[options.quality],
+      n: 1,
+      response_format: "b64_json",
+      size: "1024x1024"
     });
 
-    // Extract the base64 image from the response
-    const content = response.choices[0]?.message?.content;
+    const imageData = response.data[0]?.b64_json;
 
-    if (!content || typeof content !== 'string') {
-      throw new Error('No image was returned from the API.');
-    }
-
-    // The response should contain a base64 image in markdown format
-    // Extract base64 from markdown image syntax: ![](data:image/...;base64,...)
-    const base64Match = content.match(/!\[.*?\]\(data:image\/[^;]+;base64,([^)]+)\)/);
-
-    if (!base64Match || !base64Match[1]) {
+    if (!imageData) {
       throw new Error('No restaged image was returned from the API.');
     }
 
-    return base64Match[1];
+    return imageData;
   } catch (error) {
     console.error("Error in OpenAI API call:", error);
     if (error instanceof Error) {
