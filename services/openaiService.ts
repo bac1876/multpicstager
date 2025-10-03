@@ -108,11 +108,14 @@ export const restageImage = async (
       size: "1024x1024"
     });
 
+    console.log('OpenAI response:', JSON.stringify(response, null, 2));
+
     // The response contains a URL, we need to fetch and convert to base64
     const imageUrl = response.data[0]?.url;
 
     if (!imageUrl) {
-      throw new Error('No restaged image was returned from the API.');
+      console.error('Full response data:', response.data);
+      throw new Error(`No restaged image was returned from the API. Response: ${JSON.stringify(response.data)}`);
     }
 
     // Fetch the image and convert to base64
