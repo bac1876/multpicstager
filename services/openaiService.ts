@@ -23,7 +23,7 @@ interface RestageOptions {
 }
 
 /**
- * Sends an image to the OpenAI API to be restaged.
+ * Sends an image to the OpenAI API to be restaged using gpt-image-1.
  * @param base64ImageData The base64-encoded image data.
  * @param mimeType The MIME type of the image (e.g., 'image/jpeg').
  * @param roomType The type of room to inform the restaging prompt.
@@ -71,30 +71,52 @@ export const restageImage = async (
     // Construct the image data URL
     const imageDataUrl = `data:${mimeType};base64,${base64ImageData}`;
 
-    // Map quality to OpenAI's quality parameter
-    const qualityMap: Record<ImageQuality, 'standard' | 'hd'> = {
-      low: 'standard',
-      medium: 'standard',
-      high: 'hd'
+    // Map quality to size (quality parameter doesn't work with edit)
+    const sizeMap: Record<ImageQuality, '1024x1024' | '1536x1536'> = {
+      low: '1024x1024',
+      medium: '1024x1024',
+      high: '1536x1536'
     };
 
-    const response = await openai.images.edit({
+    // Use Chat Completions API with gpt-image-1
+    const response = await openai.chat.completions.create({
       model: "gpt-image-1",
-      image: imageDataUrl,
-      prompt: fullPrompt,
-      quality: qualityMap[options.quality],
-      n: 1,
-      response_format: "b64_json",
-      size: "1024x1024"
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: {
+                url: imageDataUrl
+              }
+            },
+            {
+              type: "text",
+              text: fullPrompt
+            }
+          ]
+        }
+      ],
+      max_completion_tokens: 2048,
     });
 
-    const imageData = response.data[0]?.b64_json;
+    // Extract the base64 image from the response
+    const content = response.choices[0]?.message?.content;
 
-    if (!imageData) {
+    if (!content || typeof content !== 'string') {
+      throw new Error('No image was returned from the API.');
+    }
+
+    // The response should contain a base64 image in markdown format
+    // Extract base64 from markdown image syntax: ![](data:image/...;base64,...)
+    const base64Match = content.match(/!\[.*?\]\(data:image\/[^;]+;base64,([^)]+)\)/);
+
+    if (!base64Match || !base64Match[1]) {
       throw new Error('No restaged image was returned from the API.');
     }
 
-    return imageData;
+    return base64Match[1];
   } catch (error) {
     console.error("Error in OpenAI API call:", error);
     if (error instanceof Error) {
