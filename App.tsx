@@ -8,9 +8,9 @@ import { Header } from './components/Header';
 import { HeroSection } from './components/HeroSection';
 import { FeaturesSection } from './components/FeaturesSection';
 import { SparklesIcon, TrashIcon, DownloadIcon } from './components/IconComponents';
-import type { ImageFile, ProcessingStatus, StyleType } from './types';
+import type { ImageFile, ProcessingStatus, StyleType, RoomType, ImageQuality } from './types';
 import { styleTypes } from './types';
-import { restageImage } from './services/geminiService';
+import { restageImage } from './services/openaiService';
 import { MAX_FILES } from './constants';
 
 const fileToBase64 = (file: File): Promise<string> => {
@@ -31,6 +31,7 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedStyle, setSelectedStyle] = useState<StyleType>('Modern');
+  const [selectedQuality, setSelectedQuality] = useState<ImageQuality>('low');
   const [showUploader, setShowUploader] = useState<boolean>(false);
   const uploaderRef = useRef<HTMLDivElement>(null);
 
@@ -75,6 +76,7 @@ export default function App() {
       changeFlooring: false,
       flooringType: 'carpet',
       additionalInstructions: '',
+      quality: 'low',
     }));
     setImages(newImages);
   }, []);
@@ -104,6 +106,7 @@ export default function App() {
           flooringType: imageToProcess.flooringType,
           style: selectedStyle,
           additionalInstructions: imageToProcess.additionalInstructions,
+          quality: imageToProcess.quality,
         };
 
         const restagedBase64 = await restageImage(base64Data, imageToProcess.file.type, effectiveRoomType, restageOptions);
@@ -250,6 +253,26 @@ export default function App() {
                             {styleTypes.map(style => (
                                 <option key={style} value={style}>{style}</option>
                             ))}
+                        </select>
+                    </div>
+                    <div className="w-full md:w-1/3">
+                        <label htmlFor="image-quality" className="mb-2 block text-sm font-medium text-gray-300">
+                            Image Quality
+                        </label>
+                        <select
+                            id="image-quality"
+                            value={selectedQuality}
+                            onChange={(e) => {
+                                const newQuality = e.target.value as ImageQuality;
+                                setSelectedQuality(newQuality);
+                                setImages(prev => prev.map(img => ({ ...img, quality: newQuality })));
+                            }}
+                            className="block w-full rounded-lg border border-white/10 bg-black/60 px-4 py-3 text-white shadow-sm transition-all duration-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 sm:text-sm"
+                            disabled={isProcessing}
+                        >
+                            <option value="low">Low ($0.01/image)</option>
+                            <option value="medium">Medium ($0.04/image)</option>
+                            <option value="high">High ($0.17/image)</option>
                         </select>
                     </div>
                     <div className="flex w-full flex-col items-center justify-end gap-4 sm:flex-row md:w-auto">

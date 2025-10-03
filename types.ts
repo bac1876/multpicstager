@@ -31,6 +31,8 @@ export type FlooringType = 'carpet' | 'wood' | 'tile' | 'laminate';
 
 export type ProcessingStatus = 'idle' | 'processing' | 'done' | 'error';
 
+export type ImageQuality = 'low' | 'medium' | 'high';
+
 export interface ImageFile {
   id: string;
   file: File;
@@ -46,4 +48,5 @@ export interface ImageFile {
   changeFlooring: boolean;
   flooringType: FlooringType;
   additionalInstructions: string;
+  quality: ImageQuality;
 }
