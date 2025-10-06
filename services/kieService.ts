@@ -20,7 +20,10 @@ interface RestageOptions {
 interface KieTaskResponse {
   code: number;
   msg: string;
-  taskId?: string;
+  data?: {
+    taskId: string;
+    recordId: string;
+  };
 }
 
 interface KieStatusResponse {
@@ -69,12 +72,12 @@ export const createKieTask = async (
   // Debug: Log full API response
   console.log('KIE API Response:', JSON.stringify(data, null, 2));
 
-  if (data.code !== 200 || !data.taskId) {
+  if (data.code !== 200 || !data.data?.taskId) {
     console.error('KIE API Error - Full response:', data);
     throw new Error(`Failed to create KIE task: ${data.msg || 'No taskId returned'}`);
   }
 
-  return data.taskId;
+  return data.data.taskId;
 };
 
 /**
