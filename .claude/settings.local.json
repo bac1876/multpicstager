@@ -13,7 +13,8 @@
       "WebSearch",
       "Bash(npm install:*)",
       "Bash(ls:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(git rebase:*)"
     ],
     "deny": [],
     "ask": []

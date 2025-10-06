@@ -10,7 +10,8 @@ import { FeaturesSection } from './components/FeaturesSection';
 import { SparklesIcon, TrashIcon, DownloadIcon } from './components/IconComponents';
 import type { ImageFile, ProcessingStatus, StyleType, RoomType, ImageQuality } from './types';
 import { styleTypes } from './types';
-import { restageImage } from './services/openaiService';
+import { restageImageWithKie } from './services/kieService';
+import { uploadBase64ToImgBB } from './services/imageUploadService';
 import { MAX_FILES } from './constants';
 
 const fileToBase64 = (file: File): Promise<string> => {
@@ -98,7 +99,7 @@ export default function App() {
       try {
         const base64Data = await fileToBase64(imageToProcess.file);
         const effectiveRoomType = imageToProcess.roomType === 'Other - describe' && imageToProcess.customRoomType ? imageToProcess.customRoomType : imageToProcess.roomType;
-        
+
         const restageOptions = {
           changePaint: imageToProcess.changePaint,
           paintColor: imageToProcess.paintColor,
@@ -109,21 +110,26 @@ export default function App() {
           quality: imageToProcess.quality,
         };
 
-        const restagedBase64 = await restageImage(base64Data, imageToProcess.file.type, effectiveRoomType, restageOptions);
-        const restagedUrl = `data:image/jpeg;base64,${restagedBase64}`;
-        
-        setImages(prevImages => prevImages.map(img => 
-            img.id === imageToProcess.id 
-                ? { ...img, restagedUrl, status: 'done' } 
+        // KIE API IMPLEMENTATION (50% cost savings)
+        // Step 1: Upload base64 to ImgBB to get public URL (KIE requires HTTP/HTTPS URLs)
+        const imageUrl = await uploadBase64ToImgBB(base64Data);
+
+        // Step 2: Create KIE task and poll for result
+        const restagedImageUrl = await restageImageWithKie(imageUrl, effectiveRoomType, restageOptions);
+
+        // KIE returns a URL, so we set it directly as the restagedUrl
+        setImages(prevImages => prevImages.map(img =>
+            img.id === imageToProcess.id
+                ? { ...img, restagedUrl: restagedImageUrl, status: 'done' }
                 : img
         ));
       } catch (e) {
         console.error(`Failed to restage image ${imageToProcess.file.name}:`, e);
         const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
-        
-        setImages(prevImages => prevImages.map(img => 
-            img.id === imageToProcess.id 
-                ? { ...img, status: 'error', error: errorMessage } 
+
+        setImages(prevImages => prevImages.map(img =>
+            img.id === imageToProcess.id
+                ? { ...img, status: 'error', error: errorMessage }
                 : img
         ));
       }
