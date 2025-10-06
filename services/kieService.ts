@@ -66,8 +66,12 @@ export const createKieTask = async (
 
   const data: KieTaskResponse = await response.json();
 
+  // Debug: Log full API response
+  console.log('KIE API Response:', JSON.stringify(data, null, 2));
+
   if (data.code !== 200 || !data.taskId) {
-    throw new Error(`Failed to create KIE task: ${data.msg}`);
+    console.error('KIE API Error - Full response:', data);
+    throw new Error(`Failed to create KIE task: ${data.msg || 'No taskId returned'}`);
   }
 
   return data.taskId;
