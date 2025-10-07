@@ -184,7 +184,9 @@ export const restageImageWithKie = async (
     let prompt = `Professionally restage this ${roomType} in a ${options.style} style. Enhance the lighting, furniture, and decor to create a high-end, aesthetically pleasing result suitable for a real estate listing.`;
 
     const rules: string[] = [
-      'Do not make any structural changes to the room (e.g., do not add or remove walls, windows, islands, or permanent fixtures).'
+      'Do not make any structural changes to the room (e.g., do not add or remove walls, windows, doors, closets, islands, or permanent fixtures).',
+      'Preserve the existing architectural layout exactly as shown in the original image.',
+      'Only modify furniture, decor, lighting, and removable items - never add built-in features like closets or doors.'
     ];
 
     if (options.changePaint) {
