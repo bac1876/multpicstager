@@ -63,13 +63,16 @@ export const createKieTask = async (
     throw new Error(`KIE API error: ${response.status} ${response.statusText}`);
   }
 
-  const data: KieTaskResponse = await response.json();
+  const data: any = await response.json();
 
-  if (data.code !== 200 || !data.taskId) {
+  // Handle both response formats: taskId can be at root or in data.taskId
+  const taskId = data.taskId || data.data?.taskId;
+
+  if (data.code !== 200 || !taskId) {
     throw new Error(`Failed to create KIE task: ${data.msg}`);
   }
 
-  return data.taskId;
+  return taskId;
 };
 
 /**
