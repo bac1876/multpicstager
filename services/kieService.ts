@@ -75,9 +75,10 @@ export const restageImage = async (
 ): Promise<string> => {
   try {
     // Prepare the image data with proper prefix
+    // KIE.ai only supports JPEG format, so always use image/jpeg
     let imageData = base64ImageData;
     if (!imageData.startsWith('data:')) {
-      imageData = `data:${mimeType};base64,${base64ImageData}`;
+      imageData = `data:image/jpeg;base64,${base64ImageData}`;
     }
 
     // Map room type and style to KIE.ai format
