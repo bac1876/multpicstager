@@ -134,13 +134,13 @@ export const checkKieTaskStatus = async (
 /**
  * Polls a KIE task until completion or timeout.
  * @param taskId The task ID to poll
- * @param maxAttempts Maximum number of polling attempts (default: 30)
+ * @param maxAttempts Maximum number of polling attempts (default: 60)
  * @param intervalMs Milliseconds between polls (default: 2000)
  * @returns Array of result image URLs
  */
 export const pollKieTask = async (
   taskId: string,
-  maxAttempts: number = 30,
+  maxAttempts: number = 60,
   intervalMs: number = 2000
 ): Promise<string[]> => {
   for (let i = 0; i < maxAttempts; i++) {
