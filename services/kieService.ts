@@ -11,6 +11,37 @@ interface RestageOptions {
 }
 
 /**
+ * Converts base64 image to JPEG format using canvas
+ */
+async function convertToJPEG(base64Data: string, mimeType: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'));
+        return;
+      }
+      ctx.drawImage(img, 0, 0);
+      // Convert to JPEG with 0.95 quality
+      const jpegBase64 = canvas.toDataURL('image/jpeg', 0.95);
+      // Remove the data:image/jpeg;base64, prefix
+      const base64Only = jpegBase64.split(',')[1];
+      resolve(base64Only);
+    };
+    img.onerror = () => reject(new Error('Failed to load image'));
+    // Create proper data URL
+    const dataUrl = base64Data.startsWith('data:')
+      ? base64Data
+      : `data:${mimeType};base64,${base64Data}`;
+    img.src = dataUrl;
+  });
+}
+
+/**
  * Converts an image URL to base64 string
  */
 async function urlToBase64(url: string): Promise<string> {
@@ -74,12 +105,10 @@ export const restageImage = async (
   options: RestageOptions
 ): Promise<string> => {
   try {
-    // Prepare the image data with proper prefix
-    // KIE.ai only supports JPEG format, so always use image/jpeg
-    let imageData = base64ImageData;
-    if (!imageData.startsWith('data:')) {
-      imageData = `data:image/jpeg;base64,${base64ImageData}`;
-    }
+    // Convert image to JPEG format (KIE.ai only supports JPEG)
+    console.log('Converting image to JPEG format...');
+    const jpegBase64 = await convertToJPEG(base64ImageData, mimeType);
+    const imageData = `data:image/jpeg;base64,${jpegBase64}`;
 
     // Map room type and style to KIE.ai format
     const mappedRoomType = mapRoomType(roomType);
