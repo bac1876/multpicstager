@@ -10,7 +10,8 @@ import { FeaturesSection } from './components/FeaturesSection';
 import { SparklesIcon, TrashIcon, DownloadIcon } from './components/IconComponents';
 import type { ImageFile, ProcessingStatus, StyleType, RoomType, ImageQuality } from './types';
 import { styleTypes } from './types';
-import { restageImage } from './services/kieService';
+import { restageImageWithKie } from './services/kieService';
+import { uploadBase64ToImgBB } from './services/imageUploadService';
 import { MAX_FILES } from './constants';
 
 const fileToBase64 = (file: File): Promise<string> => {
@@ -109,13 +110,17 @@ export default function App() {
           quality: imageToProcess.quality,
         };
 
-        // KIE API IMPLEMENTATION via backend endpoints (no ImgBB needed)
-        const restagedBase64 = await restageImage(base64Data, imageToProcess.file.type, effectiveRoomType, restageOptions);
-        const restagedUrl = `data:image/jpeg;base64,${restagedBase64}`;
+        // KIE API IMPLEMENTATION (50% cost savings)
+        // Step 1: Upload base64 to ImgBB to get public URL (KIE requires HTTP/HTTPS URLs)
+        const imageUrl = await uploadBase64ToImgBB(base64Data);
 
+        // Step 2: Create KIE task and poll for result
+        const restagedImageUrl = await restageImageWithKie(imageUrl, effectiveRoomType, restageOptions);
+
+        // KIE returns a URL, so we set it directly as the restagedUrl
         setImages(prevImages => prevImages.map(img =>
             img.id === imageToProcess.id
-                ? { ...img, restagedUrl, status: 'done' }
+                ? { ...img, restagedUrl: restagedImageUrl, status: 'done' }
                 : img
         ));
       } catch (e) {
