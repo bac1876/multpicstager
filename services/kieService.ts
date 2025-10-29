@@ -1,12 +1,4 @@
-
-import type { FlooringType, StyleType } from "../types";
-
-if (!process.env.KIEAI_API_KEY) {
-  console.warn("KIEAI_API_KEY environment variable not set. API calls will fail.");
-}
-
-const KIEAI_API_KEY = process.env.KIEAI_API_KEY?.trim();
-const KIE_BASE_URL = "https://api.kie.ai/api/v1/playground";
+import type { FlooringType, StyleType, ImageQuality } from "../types";
 
 interface RestageOptions {
   changePaint: boolean;
@@ -15,222 +7,187 @@ interface RestageOptions {
   flooringType: FlooringType;
   style: StyleType;
   additionalInstructions: string;
-}
-
-interface KieTaskResponse {
-  code: number;
-  msg: string;
-  data?: {
-    taskId: string;
-    recordId: string;
-  };
-}
-
-interface KieStatusResponse {
-  code: number;
-  msg: string;
-  data?: {
-    taskId: string;
-    state: 'queuing' | 'processing' | 'generating' | 'success' | 'fail';
-    resultJson?: string;
-    failCode?: string;
-    failMsg?: string;
-  };
+  quality: ImageQuality;
 }
 
 /**
- * Creates a KIE.ai task to restage an image.
- * @param imageUrl Public HTTP/HTTPS URL of the image
- * @param prompt The staging prompt with instructions
- * @returns The task ID for polling
+ * Converts an image URL to base64 string
  */
-export const createKieTask = async (
-  imageUrl: string,
-  prompt: string
-): Promise<string> => {
-  const response = await fetch(`${KIE_BASE_URL}/createTask`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${KIEAI_API_KEY}`
-    },
-    body: JSON.stringify({
-      model: "google/nano-banana-edit",
-      input: {
-        prompt: prompt,
-        image_urls: [imageUrl]
-      }
-    })
-  });
+async function urlToBase64(url: string): Promise<string> {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
 
-  if (!response.ok) {
-    throw new Error(`KIE API error: ${response.status} ${response.statusText}`);
-  }
-
-  const data: KieTaskResponse = await response.json();
-
-  // Debug: Log full API response
-  console.log('KIE API Response:', JSON.stringify(data, null, 2));
-
-  if (data.code !== 200 || !data.data?.taskId) {
-    console.error('KIE API Error - Full response:', data);
-    throw new Error(`Failed to create KIE task: ${data.msg || 'No taskId returned'}`);
-  }
-
-  return data.data.taskId;
-};
-
-/**
- * Checks the status of a KIE.ai task.
- * @param taskId The task ID to check
- * @returns Status object with state and result URLs if complete
- */
-export const checkKieTaskStatus = async (
-  taskId: string
-): Promise<{
-  status: 'processing' | 'completed' | 'failed';
-  imageUrls?: string[];
-  error?: string;
-}> => {
-  const response = await fetch(
-    `${KIE_BASE_URL}/recordInfo?taskId=${taskId}`,
-    {
-      headers: {
-        'Authorization': `Bearer ${KIEAI_API_KEY}`
-      }
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error(`KIE API error: ${response.status} ${response.statusText}`);
-  }
-
-  const data: KieStatusResponse = await response.json();
-
-  if (data.code !== 200 || !data.data) {
-    throw new Error(`Failed to check task status: ${data.msg}`);
-  }
-
-  const state = data.data.state;
-
-  if (state === 'success' && data.data.resultJson) {
-    try {
-      const resultJson = JSON.parse(data.data.resultJson);
-      return {
-        status: 'completed',
-        imageUrls: resultJson.resultUrls || []
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = (reader.result as string).split(',')[1];
+        resolve(base64String);
       };
-    } catch (e) {
-      throw new Error('Failed to parse result JSON from KIE API');
-    }
-  } else if (state === 'fail') {
-    return {
-      status: 'failed',
-      error: data.data.failMsg || 'Task failed without error message'
-    };
-  } else {
-    // queuing, processing, or generating
-    return {
-      status: 'processing'
-    };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('Failed to convert URL to base64:', error);
+    throw new Error('Failed to download result image from KIE.ai');
   }
-};
+}
 
 /**
- * Polls a KIE task until completion or timeout.
- * @param taskId The task ID to poll
- * @param maxAttempts Maximum number of polling attempts (default: 30)
- * @param intervalMs Milliseconds between polls (default: 2000)
- * @returns Array of result image URLs
+ * Maps room types to KIE.ai format (lowercase with underscores)
  */
-export const pollKieTask = async (
-  taskId: string,
-  maxAttempts: number = 30,
-  intervalMs: number = 2000
-): Promise<string[]> => {
-  for (let i = 0; i < maxAttempts; i++) {
-    await new Promise(resolve => setTimeout(resolve, intervalMs));
+function mapRoomType(roomType: string): string {
+  const mapping: Record<string, string> = {
+    'Bedroom': 'bedroom',
+    'Bathroom': 'bathroom',
+    'Living room': 'living_room',
+    'Dining room': 'dining_room',
+    'Kitchen': 'kitchen',
+    'Living room, Dining room, Kitchen combo': 'living_room',
+    'Living room/Kitchen combo': 'living_room',
+    'Outside space': 'outdoor',
+    'Other - describe': 'living_room', // default fallback
+  };
 
-    const result = await checkKieTaskStatus(taskId);
-
-    if (result.status === 'completed' && result.imageUrls) {
-      return result.imageUrls;
-    } else if (result.status === 'failed') {
-      throw new Error(result.error || 'Task failed');
-    }
-    // Otherwise keep polling
-  }
-
-  throw new Error(`Task timeout after ${(maxAttempts * intervalMs) / 1000} seconds`);
-};
+  return mapping[roomType] || 'living_room';
+}
 
 /**
- * Restages an image using KIE.ai API.
- * NOTE: This function requires imageUrl to be a public HTTP/HTTPS URL.
- * Use uploadBase64ToImgBB() first if you have a base64 image.
- *
- * @param imageUrl Public HTTP/HTTPS URL of the image
- * @param roomType The type of room to inform the restaging prompt
- * @param options The user-selected options for restyling
- * @returns A promise that resolves with the URL of the restaged image
+ * Maps style types to KIE.ai format (lowercase with underscores)
  */
-export const restageImageWithKie = async (
-  imageUrl: string,
+function mapStyleType(style: StyleType): string {
+  return style.toLowerCase().replace(/\s+/g, '_');
+}
+
+/**
+ * Sends an image to the KIE.ai API to be restaged using asynchronous task processing.
+ * @param base64ImageData The base64-encoded image data.
+ * @param mimeType The MIME type of the image (e.g., 'image/jpeg').
+ * @param roomType The type of room to inform the restaging prompt.
+ * @param options The user-selected options for restyling.
+ * @returns A promise that resolves with the base64-encoded string of the restaged image.
+ */
+export const restageImage = async (
+  base64ImageData: string,
+  mimeType: string,
   roomType: string,
   options: RestageOptions
 ): Promise<string> => {
   try {
-    // Build the prompt (same format as Gemini)
-    let prompt = `Professionally restage this ${roomType} in a ${options.style} style. Enhance the lighting, furniture, and decor to create a high-end, aesthetically pleasing result suitable for a real estate listing.`;
+    // Prepare the image data with proper prefix
+    let imageData = base64ImageData;
+    if (!imageData.startsWith('data:')) {
+      imageData = `data:${mimeType};base64,${base64ImageData}`;
+    }
 
-    const rules: string[] = [
-      'Do not make any structural changes to the room (e.g., do not add or remove walls, windows, doors, closets, islands, or permanent fixtures).',
-      'Preserve the existing architectural layout exactly as shown in the original image.',
-      'Only modify furniture, decor, lighting, and removable items - never add built-in features like closets or doors.'
-    ];
+    // Map room type and style to KIE.ai format
+    const mappedRoomType = mapRoomType(roomType);
+    const mappedStyle = mapStyleType(options.style);
 
-    if (options.changePaint) {
-      if (options.paintColor && options.paintColor.trim()) {
-        prompt += ` Repaint the walls a ${options.paintColor.trim()} color.`;
+    // Prepare request body for KIE.ai API endpoint
+    const requestBody = {
+      image: imageData,
+      transformation_type: 'furnish', // Default to furnish for virtual staging
+      space_type: mappedRoomType === 'outdoor' ? 'exterior' : 'interior',
+      room_type: mappedRoomType,
+      design_style: mappedStyle,
+      update_flooring: options.changeFlooring,
+      block_decorative: true, // Minimize decorative items as per original settings
+    };
+
+    console.log('Submitting task to KIE.ai:', {
+      room_type: mappedRoomType,
+      design_style: mappedStyle,
+      update_flooring: options.changeFlooring,
+    });
+
+    // Step 1: Submit task to KIE.ai via backend endpoint
+    const createTaskResponse = await fetch('/api/kie-stage', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!createTaskResponse.ok) {
+      const errorData = await createTaskResponse.json();
+      throw new Error(errorData.error || `Failed to create task (status ${createTaskResponse.status})`);
+    }
+
+    const taskResult = await createTaskResponse.json();
+
+    if (!taskResult.success || !taskResult.taskId) {
+      throw new Error(taskResult.error || 'No task ID returned from KIE.ai');
+    }
+
+    const taskId = taskResult.taskId;
+    console.log('KIE.ai task created:', taskId);
+
+    // Step 2: Poll for task completion
+    const maxAttempts = 60; // Max 60 attempts (2 minutes with 2-second intervals)
+    const pollInterval = 2000; // 2 seconds
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      attempts++;
+
+      // Wait before polling (except first attempt)
+      if (attempts > 1) {
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
       } else {
-        prompt += ` Repaint the walls with a new, stylish, and complementary color that fits the ${options.style} theme.`;
+        // First poll after a shorter delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
-    } else {
-      rules.push('Do not change the wall paint color.');
+
+      console.log(`Polling KIE.ai status (attempt ${attempts}/${maxAttempts})...`);
+
+      const statusResponse = await fetch(`/api/kie-check-status?taskId=${taskId}`);
+
+      if (!statusResponse.ok) {
+        console.error('Status check failed:', statusResponse.status);
+        continue; // Retry on error
+      }
+
+      const statusResult = await statusResponse.json();
+
+      if (statusResult.status === 'completed' && statusResult.images && statusResult.images.length > 0) {
+        console.log('KIE.ai task completed successfully');
+        const imageUrl = statusResult.images[0];
+
+        // Convert the result URL to base64
+        const base64Result = await urlToBase64(imageUrl);
+        return base64Result;
+      } else if (statusResult.status === 'failed') {
+        throw new Error(statusResult.error || 'Task failed at KIE.ai');
+      } else if (statusResult.status === 'processing') {
+        // Continue polling
+        console.log('Task still processing...');
+        continue;
+      } else {
+        console.warn('Unexpected status:', statusResult.status);
+        continue;
+      }
     }
 
-    if (options.changeFlooring) {
-      prompt += ` Replace the flooring with new ${options.flooringType} that fits the ${options.style} theme.`;
-    } else {
-      rules.push('Do not change the flooring.');
-    }
+    // If we've exhausted all attempts
+    throw new Error('Task timed out after 2 minutes. Please try again.');
 
-    if (options.additionalInstructions && options.additionalInstructions.trim()) {
-      prompt += ` Also, follow these specific user instructions: "${options.additionalInstructions.trim()}".`;
-    }
-
-    const fullPrompt = `${prompt} IMPORTANT: ${rules.join(' ')}`;
-
-    // Create task
-    const taskId = await createKieTask(imageUrl, fullPrompt);
-
-    // Poll for completion
-    const resultUrls = await pollKieTask(taskId);
-
-    if (!resultUrls || resultUrls.length === 0) {
-      throw new Error('No restaged image was returned from the KIE API.');
-    }
-
-    // Return the first result URL
-    return resultUrls[0];
   } catch (error) {
-    console.error("Error in KIE API call:", error);
+    console.error('Error in KIE.ai service:', error);
+
     if (error instanceof Error) {
-      if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-        throw new Error('The KIE API key is invalid. Please check your configuration.');
+      if (error.message.includes('API key')) {
+        throw new Error('The KIE.ai API key is invalid. Please check your configuration.');
       }
-      throw new Error(error.message || 'Failed to communicate with the KIE AI model.');
+      if (error.message.includes('credits')) {
+        throw new Error('Insufficient credits in KIE.ai account. Please add credits.');
+      }
+      if (error.message.includes('Rate limit')) {
+        throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+      }
+      throw new Error(error.message || 'Failed to communicate with KIE.ai API.');
     }
-    throw new Error('An unknown error occurred communicating with the KIE AI model.');
+    throw new Error(`KIE.ai API error: ${error}`);
   }
 };
