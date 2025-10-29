@@ -14,7 +14,10 @@
       "Bash(npm install:*)",
       "Bash(ls:*)",
       "Bash(test:*)",
-      "Bash(git rebase:*)"
+      "Bash(git rebase:*)",
+      "Read(//c/Users/Owner/Claude Code Projects/AiStager/**)",
+      "Bash(cat:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
